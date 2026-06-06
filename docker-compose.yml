@@ -1,0 +1,5 @@
+services:
+  dip-mcp:
+    build: .
+    env_file: .env
+    command: analyse --wahlperiode 20
