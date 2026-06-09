@@ -35,12 +35,14 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     dip_api_key: str
     groq_api_key: str
     dip_api_base_url: str = "https://search.dip.bundestag.de/api/v1"
     groq_model: str = "llama-3.3-70b-versatile"
+    groq_fallback_model: str = "llama-3.1-8b-instant"
     log_level: str = "INFO"
     request_timeout_seconds: int = 30
     max_concurrent_requests: int = 5
@@ -74,8 +76,9 @@ settings: Settings = Settings()  # type: ignore[call-arg]  # values come from en
 def get_logger(name: str) -> logging.Logger:
     """Return a configured logger for the given name.
 
-    Configures the root logger on first call using settings.log_level.
-    Subsequent calls reuse the existing configuration.
+    Attaches a StreamHandler directly to the dip_mcp package logger on first
+    call so that output is always visible in the terminal even when Streamlit
+    has already configured the root logger.
 
     Args:
         name: Logger name, typically __name__ of the calling module.
@@ -85,9 +88,14 @@ def get_logger(name: str) -> logging.Logger:
     """
     global _logging_configured  # noqa: PLW0603
     if not _logging_configured:
-        logging.basicConfig(
-            level=settings.log_level,
-            format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
-        )
+        pkg_logger = logging.getLogger("dip_mcp")
+        pkg_logger.setLevel(settings.log_level)
+        if not pkg_logger.handlers:
+            handler = logging.StreamHandler()
+            handler.setFormatter(
+                logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+            )
+            pkg_logger.addHandler(handler)
+        pkg_logger.propagate = False
         _logging_configured = True
     return logging.getLogger(name)

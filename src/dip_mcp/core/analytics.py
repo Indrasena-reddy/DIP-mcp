@@ -6,29 +6,39 @@ is fully unit-testable without mocks.
 """
 
 # Standard library
+import logging
 from collections import Counter
 
 # Local
 from dip_mcp.api.models import DistributionReport, FraktionDistribution, Person
+from dip_mcp.config import get_logger
 
 UNKNOWN_FRAKTION: str = "Unbekannt"
 PERCENTAGE_PRECISION: int = 2
+TABLE_COL_FRAKTION_WIDTH: int = 35
+TABLE_COL_MEMBERS_WIDTH: int = 10
+TABLE_COL_SHARE_WIDTH: int = 8
+
+log: logging.Logger = get_logger(__name__)
 
 
-def count_per_fraktion(persons: list[Person]) -> dict[str, int]:
-    """Count the number of persons per Fraktion.
+def count_per_fraktion(persons: list[Person], wahlperiode: int) -> dict[str, int]:
+    """Count the number of persons per Fraktion for a specific Wahlperiode.
 
-    Persons with no Fraktion affiliation are counted under UNKNOWN_FRAKTION.
+    Uses WP-specific Fraktion data from person_roles where available, falling
+    back to the top-level fraktion field. Persons with no affiliation are
+    counted under UNKNOWN_FRAKTION.
 
     Args:
         persons: List of parliamentary members to aggregate.
+        wahlperiode: Election period used to resolve WP-specific Fraktion.
 
     Returns:
         Dictionary mapping each Fraktion name (or UNKNOWN_FRAKTION) to its
         member count.
     """
     keys = [
-        person.fraktion_name if person.fraktion_name is not None else UNKNOWN_FRAKTION
+        person.fraktion_for_wp(wahlperiode) or UNKNOWN_FRAKTION
         for person in persons
     ]
     return dict(Counter(keys))
@@ -77,7 +87,12 @@ def build_distribution_report(
     Raises:
         ValueError: If persons is empty because percentages cannot be computed.
     """
-    counts = count_per_fraktion(persons)
+    log.info(
+        "Building distribution report for Wahlperiode %d (%d persons)",
+        wahlperiode,
+        len(persons),
+    )
+    counts = count_per_fraktion(persons, wahlperiode)
     total = len(persons)
     unaffiliated_count = counts.pop(UNKNOWN_FRAKTION, 0)
 
@@ -116,9 +131,9 @@ def format_distribution_as_text(report: DistributionReport) -> str:
     Returns:
         Multi-line plain-text representation suitable for inclusion in an LLM prompt.
     """
-    col_fraktion = 35
-    col_members = 10
-    col_share = 8
+    col_fraktion = TABLE_COL_FRAKTION_WIDTH
+    col_members = TABLE_COL_MEMBERS_WIDTH
+    col_share = TABLE_COL_SHARE_WIDTH
     separator = "-" * (col_fraktion + col_members + col_share + 2)
 
     header = (

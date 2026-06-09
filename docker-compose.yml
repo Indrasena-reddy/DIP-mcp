@@ -2,4 +2,12 @@ services:
   dip-mcp:
     build: .
     env_file: .env
-    command: analyse --wahlperiode 20
+    command: ["analyse", "--wahlperiode", "20"]
+
+  # Bonus: interactive chat (requires a TTY — run with: docker compose run --rm dip-mcp-chat)
+  # dip-mcp-chat:
+  #   build: .
+  #   env_file: .env
+  #   stdin_open: true
+  #   tty: true
+  #   command: ["chat"]

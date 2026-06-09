@@ -5,17 +5,20 @@ stdio-based MCP server entrypoint used by the CLI serve command.
 """
 
 # Standard library
+import logging
 from typing import Any
 
 # Third-party
 from mcp.server.fastmcp import FastMCP
 
 # Local
+from dip_mcp.config import get_logger
 from dip_mcp.mcp.tools import (
     fetch_fraktion_distribution,
-    fetch_fraktionen_list,
     fetch_person_info,
 )
+
+log: logging.Logger = get_logger(__name__)
 
 mcp: FastMCP = FastMCP(
     "dip-parliamentary-analyst",
@@ -68,30 +71,11 @@ async def get_person_info(name: str, wahlperiode: int = 20) -> dict[str, Any]:
     return result
 
 
-@mcp.tool(
-    description=(
-        "List all parliamentary groups (Fraktionen) registered for a given Wahlperiode. "
-        "Use this for questions about which parties are represented."
-    )
-)
-async def list_fraktionen(wahlperiode: int = 20) -> list[dict[str, Any]]:
-    """Return all Fraktionen registered for the given election period.
-
-    Args:
-        wahlperiode: The election period number. Defaults to 20.
-
-    Returns:
-        List of Fraktion dicts with id, bezeichnung, wahlperiode_nummer,
-        anfangsdatum, and enddatum fields.
-    """
-    raw = await fetch_fraktionen_list(wahlperiode)
-    return [dict(entry) for entry in raw]
-
-
 def run_server() -> None:
     """Start the MCP server using stdio transport.
 
     Intended to be called as a CLI entrypoint. Blocks until the server is
     stopped by the client or process signal.
     """
+    log.info("Starting MCP stdio server (transport=stdio)")
     mcp.run(transport="stdio")

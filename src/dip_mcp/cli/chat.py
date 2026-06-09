@@ -1,30 +1,30 @@
 """Interactive MCP tool-calling chat CLI for the DIP parliamentary analyser.
 
-Provides a REPL that sends user messages to Groq with the three MCP tool schemas.
-When the model requests a tool, the underlying function from tools.py is called
-directly (in-process — no MCP transport overhead) and the result is fed back for
-a final answer.
+Provides a REPL that sends user messages to Groq with the two MCP tool schemas.
+When the model requests a tool, the call is routed through the FastMCP server
+instance (mcp.call_tool) so it genuinely flows through the MCP protocol layer
+rather than bypassing it with direct function calls.
 """
 
 # Standard library
 import asyncio
 import json
+import logging
 from typing import Any
 
 # Third-party
 import groq
+from mcp.types import TextContent
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 # Local
-from dip_mcp.config import settings
+from dip_mcp.config import get_logger, settings
 from dip_mcp.llm.groq_client import CHAT_SYSTEM_PROMPT, GroqClient
-from dip_mcp.mcp.tools import (
-    fetch_fraktion_distribution,
-    fetch_fraktionen_list,
-    fetch_person_info,
-)
+from dip_mcp.mcp.server import mcp
+
+log: logging.Logger = get_logger(__name__)
 
 EXIT_COMMANDS: frozenset[str] = frozenset({"exit", "quit", "q", "bye"})
 
@@ -84,51 +84,34 @@ TOOL_SCHEMAS: list[dict[str, Any]] = [
             },
         },
     },
-    {
-        "type": "function",
-        "function": {
-            "name": "list_fraktionen",
-            "description": (
-                "List all parliamentary groups (Fraktionen) registered for a given Wahlperiode. "
-                "Use this for questions about which parties are represented."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "wahlperiode": {
-                        "type": "integer",
-                        "description": "The election period number. Defaults to 20.",
-                    }
-                },
-                "required": [],
-            },
-        },
-    },
 ]
 
 
 async def _dispatch_tool(name: str, args: dict[str, Any]) -> str:
-    """Execute the named MCP tool and return its result as a JSON string.
+    """Execute a tool via the MCP server and return its result as a JSON string.
+
+    Routes the call through FastMCP.call_tool so it genuinely flows through
+    the MCP protocol layer. Handles both dict and ContentBlock return types.
 
     Args:
-        name: Tool name matching one of the three registered MCP tools.
-        args: Parsed keyword arguments for the tool function.
+        name: Tool name registered on the MCP server.
+        args: Parsed keyword arguments for the tool.
 
     Returns:
-        JSON-encoded result string, or a JSON error object for unknown tools.
+        JSON-encoded result string, or a JSON error object on failure.
     """
-    if name == "get_fraktion_distribution":
-        wahlperiode = int(args.get("wahlperiode", 20))
-        report = await fetch_fraktion_distribution(wahlperiode)
-        return json.dumps(report.model_dump())
-    if name == "get_person_info":
-        person_name = str(args.get("name", ""))
-        wahlperiode = int(args.get("wahlperiode", 20))
-        return json.dumps(await fetch_person_info(person_name, wahlperiode))
-    if name == "list_fraktionen":
-        wahlperiode = int(args.get("wahlperiode", 20))
-        return json.dumps(await fetch_fraktionen_list(wahlperiode))
-    return json.dumps({"error": f"Unknown tool: '{name}'"})
+    log.info("MCP tool call: %s with args %s", name, list(args.keys()))
+    result = await mcp.call_tool(name, args)
+
+    # FastMCP.call_tool returns (Sequence[ContentBlock], raw_dict) tuple.
+    # Take the ContentBlock list (index 0) and extract text from each block.
+    content_blocks = result[0] if isinstance(result, tuple) else result
+    if isinstance(content_blocks, dict):
+        return json.dumps(content_blocks)
+
+    texts = [block.text for block in content_blocks if isinstance(block, TextContent)]
+    combined = "".join(texts)
+    return combined if combined else json.dumps({"error": f"No result from tool '{name}'"})
 
 
 def chat_command() -> None:
@@ -145,6 +128,7 @@ async def run_chat() -> None:
     answer. Handles groq.APIError per turn (session continues) and
     KeyboardInterrupt at the top level (session exits cleanly).
     """
+    log.info("Chat session started")
     console = Console()
     console.print(
         Panel(WELCOME_MESSAGE, title="DIP Parliamentary Assistant", border_style="blue")
@@ -166,9 +150,11 @@ async def run_chat() -> None:
                 if not stripped:
                     continue
                 if stripped.lower() in EXIT_COMMANDS:
+                    log.info("Chat session ended by user command")
                     console.print("[dim]Auf Wiedersehen![/dim]")
                     break
 
+                log.info("LLM called: processing user turn (%d chars)", len(stripped))
                 conversation_history.append({"role": "user", "content": stripped})
 
                 try:
@@ -258,6 +244,7 @@ async def run_chat() -> None:
                     )
 
                 except groq.APIError as exc:
+                    log.error("Groq API error during chat turn: %s", exc)
                     console.print(
                         Panel(
                             f"[red]API Error:[/red] {exc}\n\n"
@@ -268,4 +255,5 @@ async def run_chat() -> None:
                     )
 
     except KeyboardInterrupt:
+        log.info("Chat session interrupted by user (KeyboardInterrupt)")
         console.print("\n[dim]Auf Wiedersehen![/dim]")

@@ -18,7 +18,7 @@ import tenacity
 from pydantic import ValidationError
 
 # Local
-from dip_mcp.api.models import Fraktion, Person
+from dip_mcp.api.models import Person
 from dip_mcp.config import Settings, get_logger
 
 DEFAULT_PAGE_SIZE: int = 100
@@ -202,6 +202,7 @@ class DipApiClient:
         Returns:
             List of validated Person objects for the requested Wahlperiode.
         """
+        self._log.info("API call started: GET /person (Wahlperiode %d)", wahlperiode)
         raw_docs = await self._fetch_all_pages(
             "/person",
             {"wahlperiode-nummer": wahlperiode, "format": "json"},
@@ -211,33 +212,21 @@ class DipApiClient:
         for doc in raw_docs:
             try:
                 persons.append(Person.model_validate(doc))
+                self._log.debug("Parsed person document id=%s", doc.get("id", "?"))
             except ValidationError as exc:
                 self._log.warning("Skipping invalid person document: %s", exc)
 
-        return persons
-
-    async def get_person_by_id(self, person_id: str) -> Person:
-        """Fetch a single parliamentary member by their DIP identifier.
-
-        Args:
-            person_id: Unique DIP person identifier, e.g. "7527".
-
-        Returns:
-            Validated Person object for the given identifier.
-
-        Raises:
-            ValueError: If the API returns no document for the identifier.
-            httpx.HTTPStatusError: On a non-2xx response after all retry attempts.
-        """
-        raw = await self._get(f"/person/{person_id}", {"format": "json"})
-
-        if "documents" in raw:
-            docs: list[dict[str, Any]] = raw.get("documents", [])
-            if not docs:
-                raise ValueError(f"Person with id '{person_id}' not found.")
-            return Person.model_validate(docs[0])
-
-        return Person.model_validate(raw)
+        # The API ignores wahlperiode-nummer — filter client-side using each
+        # person's wahlperiode list so only actual members of that WP are kept.
+        filtered = [p for p in persons if wahlperiode in p.wahlperiode]
+        self._log.info(
+            "Parsed %d persons, filtered to %d for Wahlperiode %d (skipped %d invalid)",
+            len(persons),
+            len(filtered),
+            wahlperiode,
+            len(raw_docs) - len(persons),
+        )
+        return filtered
 
     async def search_persons_by_name(
         self,
@@ -257,40 +246,10 @@ class DipApiClient:
             List of Person objects whose display name contains the search string.
         """
         period = wahlperiode if wahlperiode is not None else DEFAULT_WAHLPERIODE
+        self._log.info("Searching persons by name '%s' in Wahlperiode %d", name, period)
         all_persons = await self.get_persons(period)
         name_lower = name.lower()
-        return [p for p in all_persons if name_lower in p.display_name.lower()]
+        matches = [p for p in all_persons if name_lower in p.display_name.lower()]
+        self._log.info("Name search '%s' returned %d match(es)", name, len(matches))
+        return matches
 
-    async def get_fraktionen(self, wahlperiode: int) -> list[Fraktion]:
-        """Fetch all parliamentary groups (Fraktionen) for a given Wahlperiode.
-
-        Documents that fail Pydantic validation are logged at WARNING level
-        and skipped.
-
-        Args:
-            wahlperiode: Election period number, e.g. 20 for the 20th Bundestag.
-
-        Returns:
-            List of validated Fraktion objects for the requested Wahlperiode.
-        """
-        try:
-            raw_docs = await self._fetch_all_pages(
-                "/fraktion",
-                {"wahlperiode-nummer": wahlperiode, "format": "json"},
-            )
-        except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 404:
-                self._log.warning(
-                    "/fraktion endpoint returned 404 — endpoint not available; returning empty list."
-                )
-                return []
-            raise
-
-        fraktionen: list[Fraktion] = []
-        for doc in raw_docs:
-            try:
-                fraktionen.append(Fraktion.model_validate(doc))
-            except ValidationError as exc:
-                self._log.warning("Skipping invalid fraktion document: %s", exc)
-
-        return fraktionen

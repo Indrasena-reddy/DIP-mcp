@@ -6,6 +6,7 @@ distribution, generate a Groq LLM summary, and render results with Rich.
 
 # Standard library
 import asyncio
+import logging
 from datetime import datetime
 from typing import Annotated
 
@@ -20,11 +21,13 @@ from rich.table import Table
 
 # Local
 from dip_mcp.api.client import DipApiClient
-from dip_mcp.config import settings
+from dip_mcp.config import get_logger, settings
 from dip_mcp.core.analytics import build_distribution_report
 from dip_mcp.llm.groq_client import GroqClient
 
 DEFAULT_WAHLPERIODE: int = 20
+
+log: logging.Logger = get_logger(__name__)
 
 
 def analyse_command(
@@ -52,6 +55,7 @@ async def run_analysis(wahlperiode: int) -> None:
     Args:
         wahlperiode: Election period number to fetch and analyse.
     """
+    log.info("Analysis pipeline started for Wahlperiode %d", wahlperiode)
     console = Console()
 
     console.print(
@@ -80,7 +84,9 @@ async def run_analysis(wahlperiode: int) -> None:
                     fetch_task,
                     description=f"[green]✓ Fetched {len(persons)} persons",
                 )
+        log.info("Fetched %d persons from DIP API", len(persons))
     except httpx.HTTPStatusError as exc:
+        log.error("HTTP error fetching persons for Wahlperiode %d: %s", wahlperiode, exc)
         console.print(
             Panel(
                 f"[red]HTTP {exc.response.status_code}:[/red] {exc.request.url}\n{exc}",
@@ -101,6 +107,7 @@ async def run_analysis(wahlperiode: int) -> None:
         )
         report = build_distribution_report(persons, wahlperiode)
         progress.update(dist_task, description="[green]✓ Distribution computed")
+    log.info("Distribution computed: %d Fraktionen", len(report.distribution))
 
     table = Table(
         title=f"Fraktion Distribution — Wahlperiode {wahlperiode}",
@@ -125,6 +132,7 @@ async def run_analysis(wahlperiode: int) -> None:
     )
 
     summary: str | None = None
+    log.info("LLM called: generating distribution summary via Groq")
     try:
         async with GroqClient(settings) as llm:
             with Progress(
@@ -138,7 +146,9 @@ async def run_analysis(wahlperiode: int) -> None:
                 )
                 summary = await llm.generate_distribution_summary(report)
                 progress.update(llm_task, description="[green]✓ Summary generated")
+        log.info("LLM summary generated successfully")
     except groq.APIError as exc:
+        log.error("Groq API error during summary generation: %s", exc)
         console.print(
             f"[yellow]Warning:[/yellow] LLM summary unavailable — {exc}"
         )

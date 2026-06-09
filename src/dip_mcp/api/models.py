@@ -72,6 +72,20 @@ class PersonBiography(BaseModel):
     religion: str | None = None
 
 
+class PersonRole(BaseModel):
+    """A single parliamentary role entry with WP-specific Fraktion data.
+
+    Attributes:
+        fraktion: Fraktion name for this role, or None if not a Fraktion role.
+        wahlperiode_nummer: Wahlperioden this role applies to.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    fraktion: str | None = None
+    wahlperiode_nummer: list[int] = Field(default_factory=list)
+
+
 class Person(BaseModel):
     """A parliamentary member as returned by the DIP /person endpoint.
 
@@ -106,6 +120,7 @@ class Person(BaseModel):
     fraktion: list[str] = Field(default_factory=list)
     funktion: list[str] = Field(default_factory=list)
     wahlperiode: list[int] = Field(default_factory=list)
+    person_roles: list[PersonRole] = Field(default_factory=list)
     datum: str | None = None
     basisdatum: str | None = None
     aktualisiert: str | None = None
@@ -147,27 +162,22 @@ class Person(BaseModel):
         """
         return self.fraktion[0] if self.fraktion else None
 
+    def fraktion_for_wp(self, wahlperiode: int) -> str | None:
+        """Return the Fraktion this person belonged to in a specific Wahlperiode.
 
-class Fraktion(BaseModel):
-    """A parliamentary group as returned by the DIP API.
+        Checks person_roles first for a WP-specific Fraktion entry, then falls
+        back to the top-level fraktion field.
 
-    Attributes:
-        id: Unique DIP identifier.
-        typ: Document type, always "Fraktion".
-        bezeichnung: Official name of the parliamentary group.
-        wahlperiode_nummer: Wahlperiode this Fraktion belongs to.
-        anfangsdatum: Start date as ISO 8601 string.
-        enddatum: End date as ISO 8601 string, or None if still active.
-    """
+        Args:
+            wahlperiode: The election period to look up.
 
-    model_config = ConfigDict(extra="ignore")
-
-    id: str
-    typ: str
-    bezeichnung: str
-    wahlperiode_nummer: int | None = None
-    anfangsdatum: str | None = None
-    enddatum: str | None = None
+        Returns:
+            Fraktion name for the given WP, or None if unaffiliated.
+        """
+        for role in self.person_roles:
+            if wahlperiode in role.wahlperiode_nummer and role.fraktion:
+                return role.fraktion
+        return self.fraktion_name
 
 
 class PaginatedResponse(BaseModel, Generic[T]):

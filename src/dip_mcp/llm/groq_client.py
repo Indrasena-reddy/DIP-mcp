@@ -71,6 +71,7 @@ class GroqClient:
             api_key=settings.groq_api_key
         )
         self._model: str = settings.groq_model
+        self._fallback_model: str = settings.groq_fallback_model
         self._log: logging.Logger = get_logger(__name__)
 
     async def __aenter__(self) -> "GroqClient":
@@ -95,6 +96,35 @@ class GroqClient:
             exc_tb: Traceback of the exception, or None.
         """
         await self._client.close()
+
+    async def _complete(self, **kwargs: Any) -> groq.types.chat.ChatCompletion:
+        """Call chat.completions.create with automatic fallback on rate-limit.
+
+        Tries the primary model first. If Groq returns a 429 rate-limit error,
+        retries once with the configured fallback model.
+
+        Args:
+            **kwargs: Arguments forwarded to chat.completions.create (excluding model).
+
+        Returns:
+            ChatCompletion from whichever model succeeded.
+
+        Raises:
+            groq.RateLimitError: If the fallback model is also rate-limited.
+            groq.APIError: On any other Groq API failure.
+        """
+        try:
+            raw = await self._client.chat.completions.create(model=self._model, **kwargs)
+        except groq.RateLimitError:
+            self._log.warning(
+                "Rate limit hit on %s — retrying with fallback model %s",
+                self._model,
+                self._fallback_model,
+            )
+            raw = await self._client.chat.completions.create(
+                model=self._fallback_model, **kwargs
+            )
+        return cast(groq.types.chat.ChatCompletion, raw)
 
     async def generate_distribution_summary(
         self,
@@ -121,8 +151,7 @@ class GroqClient:
         )
 
         try:
-            response = await self._client.chat.completions.create(
-                model=self._model,
+            response = await self._complete(
                 messages=[
                     {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
                     {"role": "user", "content": user_message},
@@ -158,8 +187,7 @@ class GroqClient:
             groq.APIError: On Groq API failure after the request is sent.
         """
         try:
-            raw = await self._client.chat.completions.create(  # type: ignore[call-overload]
-                model=self._model,
+            return await self._complete(  # type: ignore[call-overload]
                 messages=messages,
                 tools=tools,
                 tool_choice="auto",
@@ -169,5 +197,3 @@ class GroqClient:
         except groq.APIError as exc:
             self._log.error("Groq API error during tool-calling chat: %s", exc)
             raise
-
-        return cast(groq.types.chat.ChatCompletion, raw)
