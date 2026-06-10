@@ -1,4 +1,4 @@
-"""Unit tests for DIP API Pydantic domain models (Task 10.4)."""
+"""Unit tests for DIP API Pydantic domain models."""
 
 # Third-party
 import pytest
