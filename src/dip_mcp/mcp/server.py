@@ -33,7 +33,7 @@ mcp: FastMCP = FastMCP(
         "Use this for questions about group distribution or election period statistics."
     )
 )
-async def get_fraktion_distribution(wahlperiode: int) -> dict[str, Any]:
+async def get_fraktion_distribution(wahlperiode: int | str) -> dict[str, Any]:
     """Compute and return the Fraktion distribution for the given election period.
 
     Args:
@@ -43,7 +43,7 @@ async def get_fraktion_distribution(wahlperiode: int) -> dict[str, Any]:
         DistributionReport serialized to a dict with wahlperiode, total_persons,
         unaffiliated_count, and a sorted distribution list.
     """
-    report = await fetch_fraktion_distribution(wahlperiode)
+    report = await fetch_fraktion_distribution(int(wahlperiode))
     result: dict[str, Any] = report.model_dump()
     return result
 
@@ -55,7 +55,7 @@ async def get_fraktion_distribution(wahlperiode: int) -> dict[str, Any]:
         "Use this for questions about specific individuals."
     )
 )
-async def get_person_info(name: str, wahlperiode: int = 20) -> dict[str, Any]:
+async def get_person_info(name: str, wahlperiode: int | str = 20) -> dict[str, Any]:
     """Return biographical and parliamentary data for a politician matched by name.
 
     Args:
@@ -66,7 +66,7 @@ async def get_person_info(name: str, wahlperiode: int = 20) -> dict[str, Any]:
         Dictionary with full_name, fraktion, wahlperiode_nummer, and biographical
         fields, or an error dict if no match is found.
     """
-    data = await fetch_person_info(name, wahlperiode)
+    data = await fetch_person_info(name, int(wahlperiode))
     result: dict[str, Any] = dict(data)
     return result
 
