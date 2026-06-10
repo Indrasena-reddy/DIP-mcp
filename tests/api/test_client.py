@@ -1,4 +1,4 @@
-"""Unit tests for the DIP API async HTTP client (Task 10.5).
+"""Unit tests for the DIP API async HTTP client 
 
 Uses respx to intercept httpx at the transport layer — no real network calls
 are made and no real API keys are required.
