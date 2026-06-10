@@ -76,3 +76,70 @@ def test_distribution_report_validator() -> None:
         )
 
 
+def test_distribution_report_validator_skips_when_unaffiliated() -> None:
+    """Test that the percentage validator is skipped when unaffiliated_count > 0."""
+    report = DistributionReport(
+        wahlperiode=20,
+        total_persons=3,
+        unaffiliated_count=1,
+        distribution=[
+            FraktionDistribution(fraktion_name="A", person_count=1, percentage=60.0),
+            FraktionDistribution(fraktion_name="B", person_count=1, percentage=60.0),
+        ],
+    )
+    assert report.unaffiliated_count == 1
+
+
+def test_person_fraktion_for_wp_uses_role() -> None:
+    """Test that fraktion_for_wp returns the WP-specific role Fraktion when present."""
+    from dip_mcp.api.models import Person, PersonRole
+
+    person = Person(
+        id="p1",
+        typ="Person",
+        vorname="Anna",
+        nachname="Schmidt",
+        fraktion=["SPD"],
+        wahlperiode=[19, 20],
+        person_roles=[
+            PersonRole(fraktion="CDU/CSU", wahlperiode_nummer=[19]),
+            PersonRole(fraktion="SPD", wahlperiode_nummer=[20]),
+        ],
+    )
+
+    assert person.fraktion_for_wp(19) == "CDU/CSU"
+    assert person.fraktion_for_wp(20) == "SPD"
+
+
+def test_person_fraktion_for_wp_falls_back_to_top_level() -> None:
+    """Test that fraktion_for_wp falls back to the top-level fraktion when no role matches."""
+    from dip_mcp.api.models import Person
+
+    person = Person(
+        id="p2",
+        typ="Person",
+        vorname="Max",
+        nachname="Mustermann",
+        fraktion=["FDP"],
+        wahlperiode=[20],
+    )
+
+    assert person.fraktion_for_wp(20) == "FDP"
+
+
+def test_person_display_name_without_titel() -> None:
+    """Test that display_name falls back to full_name when titel is not set."""
+    from dip_mcp.api.models import Person
+
+    person = Person(id="p3", typ="Person", vorname="Olaf", nachname="Scholz")
+    assert person.display_name == "Olaf Scholz"
+
+
+def test_person_fraktion_name_empty() -> None:
+    """Test that fraktion_name returns None when the fraktion list is empty."""
+    from dip_mcp.api.models import Person
+
+    person = Person(id="p4", typ="Person", vorname="A", nachname="B", fraktion=[])
+    assert person.fraktion_name is None
+
+
