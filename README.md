@@ -2,8 +2,6 @@
 
 A production-quality proof-of-concept that connects to the **German Bundestag DIP API**, analyses Fraktion (parliamentary group) membership distribution, and exposes the analysis through an **MCP (Model Context Protocol)** server with **Groq LLM** tool-calling.
 
-Built for the PwC AIMoS Coding Challenge.
-
 ---
 
 ## Project Overview
