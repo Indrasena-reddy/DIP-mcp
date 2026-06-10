@@ -1,4 +1,4 @@
-"""Unit tests for the core analytics engine (Task 10.6).
+"""Unit tests for the core analytics engine.
 
 All functions under test are pure with no I/O — no mocks are needed.
 """
