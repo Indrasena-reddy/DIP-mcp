@@ -6,10 +6,18 @@ this module — never via direct os.environ calls.
 
 # Standard library
 import logging
+import logging.handlers
+from pathlib import Path
 
 # Third-party
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+LOG_DIR: Path = Path("logs")
+LOG_FILE: Path = LOG_DIR / "app.log"
+LOG_FORMAT: str = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+LOG_MAX_BYTES: int = 5 * 1024 * 1024  # 5 MB
+LOG_BACKUP_COUNT: int = 3
 
 VALID_LOG_LEVELS: frozenset[str] = frozenset(
     {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
@@ -76,9 +84,9 @@ settings: Settings = Settings()  # type: ignore[call-arg]  # values come from en
 def get_logger(name: str) -> logging.Logger:
     """Return a configured logger for the given name.
 
-    Attaches a StreamHandler directly to the dip_mcp package logger on first
-    call so that output is always visible in the terminal even when Streamlit
-    has already configured the root logger.
+    On first call, attaches two handlers to the dip_mcp package logger:
+    - StreamHandler: always visible in terminal
+    - RotatingFileHandler: writes to logs/app.log, rotates at 5 MB, keeps 3 backups
 
     Args:
         name: Logger name, typically __name__ of the calling module.
@@ -91,11 +99,22 @@ def get_logger(name: str) -> logging.Logger:
         pkg_logger = logging.getLogger("dip_mcp")
         pkg_logger.setLevel(settings.log_level)
         if not pkg_logger.handlers:
-            handler = logging.StreamHandler()
-            handler.setFormatter(
-                logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+            formatter = logging.Formatter(LOG_FORMAT)
+
+            stream_handler = logging.StreamHandler()
+            stream_handler.setFormatter(formatter)
+            pkg_logger.addHandler(stream_handler)
+
+            LOG_DIR.mkdir(parents=True, exist_ok=True)
+            file_handler = logging.handlers.RotatingFileHandler(
+                LOG_FILE,
+                maxBytes=LOG_MAX_BYTES,
+                backupCount=LOG_BACKUP_COUNT,
+                encoding="utf-8",
             )
-            pkg_logger.addHandler(handler)
+            file_handler.setFormatter(formatter)
+            pkg_logger.addHandler(file_handler)
+
         pkg_logger.propagate = False
         _logging_configured = True
     return logging.getLogger(name)

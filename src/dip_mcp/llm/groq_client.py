@@ -187,7 +187,7 @@ class GroqClient:
             groq.APIError: On Groq API failure after the request is sent.
         """
         try:
-            return await self._complete(  # type: ignore[call-overload]
+            return await self._complete(
                 messages=messages,
                 tools=tools,
                 tool_choice="auto",

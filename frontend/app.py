@@ -59,7 +59,6 @@ INFO_TEXT: str = """
 **Data source:** Bundestag Open Data API (DIP)
 **AI model:** Groq (LLaMA-based tool-calling)
 
-*Built for the PwC AIMoS coding challenge.*
 """
 
 # ── Custom CSS ────────────────────────────────────────────────────────────────
@@ -359,7 +358,10 @@ def _process_chat_turn(
                 extended = llm_messages + new_msgs
 
                 for tc in tool_calls:
-                    tool_args: dict[str, Any] = json.loads(tc.function.arguments)
+                    try:
+                        tool_args: dict[str, Any] = json.loads(tc.function.arguments)
+                    except json.JSONDecodeError:
+                        tool_args = {}
                     result_str = await _dispatch_tool(tc.function.name, tool_args)
                     tool_msg: dict[str, Any] = {
                         "role": "tool",
@@ -422,9 +424,8 @@ def main() -> None:
             "</div>",
             unsafe_allow_html=True,
         )
-    with info_col:
-        with st.popover("ℹ"):
-            st.markdown(INFO_TEXT)
+    with info_col, st.popover("ℹ"):
+        st.markdown(INFO_TEXT)
 
     # ── Landing spacer — only on blank-slate view ─────────────────────────────
     if not has_messages and not prompt_to_process:
@@ -477,7 +478,7 @@ def main() -> None:
     # ── Hint chips — 3 side-by-side boxes, only on landing ───────────────────
     if not has_messages and not prompt_to_process:
         c1, c2, c3 = st.columns(3)
-        for col, chip, idx in zip([c1, c2, c3], HINT_CHIPS, range(3)):
+        for col, chip, idx in zip([c1, c2, c3], HINT_CHIPS, range(3), strict=True):
             with col:
                 st.button(
                     chip,
@@ -501,10 +502,9 @@ def main() -> None:
             submitted = st.form_submit_button("↑", use_container_width=True)
 
     # ── Handle form submission — store in state and rerun ─────────────────────
-    if submitted:
-        if user_input.strip():
-            st.session_state["_pending_prompt"] = user_input.strip()
-            st.rerun()
+    if submitted and user_input.strip():
+        st.session_state["_pending_prompt"] = user_input.strip()
+        st.rerun()
 
     # ── Clear chat — always below the search bar ─────────────────────────────
     _, col_clr, _ = st.columns([4, 2, 4])
