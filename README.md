@@ -6,6 +6,20 @@ Built for the PwC AIMoS Coding Challenge.
 
 ---
 
+## Quickstart (no install required)
+
+```bash
+# 1. Create a .env file with your API keys
+cp .env.example .env   # then edit .env
+
+# 2. Pull and run the pre-built image from GHCR
+docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest
+```
+
+That's it — no Python, no Poetry, no build step.
+
+---
+
 ## Project Overview
 
 The system fetches real politician data from the official German Bundestag open-data API, determines each politician's Fraktion membership, computes percentage distribution across all parliamentary groups, and uses a large language model to generate a human-readable German-language summary.
@@ -143,6 +157,24 @@ Type `exit`, `quit`, or press `Ctrl+C` to quit.
 ---
 
 ## Docker
+
+### Pre-built image (recommended)
+
+```bash
+# Run the default analyse command (Wahlperiode 20)
+docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest
+
+# Run with a specific Wahlperiode
+docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest analyse --wahlperiode 19
+
+# Interactive chat (requires a TTY)
+docker run --env-file .env -it ghcr.io/indrasena-reddy/dip-mcp:latest chat
+
+# Streamlit UI
+docker run --env-file .env -p 8501:8501 ghcr.io/indrasena-reddy/dip-mcp:latest streamlit
+```
+
+### Build locally
 
 Ensure Docker Desktop is running, then:
 
