@@ -184,16 +184,18 @@ DIE LINKE. 5,11 % und 9 fraktionslose Abgeordnete (1,21 %).
 ### System diagram
 
 ```mermaid
-flowchart LR
-    User([User]) --> CLI
+flowchart TD
+    User([User])
+    CLI["CLI\nanalyse · chat · serve"]
+    Groq["Groq LLM\nllama-3.3-70b"]
+    MCP["MCP Server\nFastMCP · stdio"]
+    DIP[("Bundestag\nDIP API")]
 
-    CLI["CLI\nanalyse · serve · chat"] --> MCP["MCP Server\nFastMCP · stdio"]
-    CLI --> Groq["Groq LLM\nllama-3.3-70b"]
-
+    User --> CLI
+    CLI --> Groq
+    CLI --> MCP
     Groq <-->|tool-calling| MCP
-
-    MCP --> DIP["DIP API\nBundestag"]
-    MCP --> Analytics["Analytics\nFraktion distribution"]
+    MCP --> DIP
 ```
 
 The system is organised into four independent layers:
