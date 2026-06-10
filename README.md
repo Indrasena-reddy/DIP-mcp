@@ -6,30 +6,15 @@ Built for the PwC AIMoS Coding Challenge.
 
 ---
 
-## Quickstart (no install required)
-
-```bash
-# 1. Create a .env file with your API keys
-cp .env.example .env   # then edit .env
-
-# 2. Pull and run the pre-built image from GHCR
-docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest
-```
-
-That's it — no Python, no Poetry, no build step.
-
----
-
 ## Project Overview
 
 The system fetches real politician data from the official German Bundestag open-data API, determines each politician's Fraktion membership, computes percentage distribution across all parliamentary groups, and uses a large language model to generate a human-readable German-language summary.
 
-The architecture has four modes of interaction:
+Three core interaction modes (task requirements):
 
-- **`BundesBot UI`** — a Streamlit chat interface for asking natural language questions about the Bundestag
-- **`analyse`** — a one-shot CLI command that fetches data, computes distribution, and generates an LLM summary
+- **`analyse`** — one-shot CLI command that fetches data, computes distribution, and generates an LLM summary
 - **`serve`** — exposes MCP tools over stdio transport so any MCP-compatible client (e.g. Claude Desktop) can call them
-- **`chat`** — an interactive REPL where the LLM automatically selects and calls the right tool based on your natural language question
+- **`chat`** — interactive REPL where the LLM automatically selects and calls the right tool based on your natural language question
 
 **Key technologies:** Python 3.11, FastMCP, Groq (`llama-3.3-70b-versatile`), httpx, Pydantic v2, Rich, Typer, Poetry, Docker.
 
@@ -39,11 +24,14 @@ The architecture has four modes of interaction:
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Python | 3.11+ | 3.12 recommended for Docker |
+| Python | 3.11+ | |
 | Poetry | 1.8+ | Dependency and packaging manager |
-| Docker | 24+ | Optional — for containerised runs |
 | DIP API key | — | German Bundestag open-data portal |
 | Groq API key | — | Free at console.groq.com |
+
+**Where to get your keys:**
+- **DIP API key:** Register at [dip.bundestag.de](https://dip.bundestag.de) or use the public demo key available in the portal documentation.
+- **Groq API key:** Create a free account at [console.groq.com](https://console.groq.com) and generate an API key under *API Keys*.
 
 ---
 
@@ -61,7 +49,7 @@ cp .env.example .env
 poetry install
 ```
 
-Open `.env` in any text editor and replace the placeholder values:
+Open `.env` and replace the placeholder values:
 
 ```
 DIP_API_KEY=your_dip_api_key_here
@@ -84,34 +72,9 @@ All configuration is read from environment variables (or the `.env` file). Never
 | `REQUEST_TIMEOUT_SECONDS` | No | `30` | HTTP request timeout |
 | `MAX_CONCURRENT_REQUESTS` | No | `5` | Max parallel DIP API requests |
 
-**Where to get your keys:**
-- **DIP API key:** Register at [dip.bundestag.de](https://dip.bundestag.de) or use the public demo key available in the portal documentation.
-- **Groq API key:** Create a free account at [console.groq.com](https://console.groq.com) and generate an API key under *API Keys*.
-
 ---
 
 ## Usage
-
-### BundesBot UI — Streamlit chat interface
-
-```bash
-poetry run streamlit run frontend/app.py
-```
-
-Opens the chat UI at **http://localhost:8501**. Ask questions in natural language (German or English) — BundesBot selects the right MCP tool, fetches live data from the DIP API, and returns a formatted answer.
-
-Example questions:
-- *Fraktion split in WP 20?*
-- *Who is Friedrich Merz?*
-- *How many MdBs in WP 20?*
-
-The UI runs on port 8501 by default. To change the port:
-
-```bash
-poetry run streamlit run frontend/app.py --server.port 8502
-```
-
----
 
 ### Analyse — fetch distribution and generate LLM summary
 
@@ -156,107 +119,6 @@ Type `exit`, `quit`, or press `Ctrl+C` to quit.
 
 ---
 
-## Docker
-
-### Pre-built image (recommended)
-
-```bash
-# Run the default analyse command (Wahlperiode 20)
-docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest
-
-# Run with a specific Wahlperiode
-docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest analyse --wahlperiode 19
-
-# Interactive chat (requires a TTY)
-docker run --env-file .env -it ghcr.io/indrasena-reddy/dip-mcp:latest chat
-
-# Streamlit UI
-docker run --env-file .env -p 8501:8501 ghcr.io/indrasena-reddy/dip-mcp:latest streamlit
-```
-
-### Build locally
-
-Ensure Docker Desktop is running, then:
-
-```bash
-# Build the image
-docker build -t dip-mcp:latest .
-
-# Run the analyse command (default)
-docker run --env-file .env dip-mcp:latest
-
-# Run with a specific Wahlperiode
-docker run --env-file .env dip-mcp:latest analyse --wahlperiode 19
-```
-
-### Docker Compose
-
-```bash
-docker compose up
-```
-
-This builds the image and runs `analyse --wahlperiode 20` by default.
-
-For the interactive chat, run with a TTY:
-
-```bash
-docker compose run --rm -it dip-mcp chat
-```
-
----
-
-## Development
-
-### Install development dependencies
-
-```bash
-poetry install
-```
-
-### Quality gates
-
-Run all checks before committing:
-
-```bash
-# Static type checking (strict mode)
-poetry run mypy src/ --strict
-
-# Linting and formatting
-poetry run ruff check src/
-
-# Docstring style
-poetry run pydocstyle src/
-
-# Security scan
-poetry run bandit -r src/
-
-# Tests
-poetry run pytest tests/ -v
-```
-
-### Project structure
-
-```
-src/dip_mcp/
-├── api/
-│   ├── client.py       # Async DIP API client with pagination and retries
-│   └── models.py       # Pydantic v2 data models
-├── cli/
-│   ├── app.py          # Typer root application and command registration
-│   ├── analyse.py      # analyse command — end-to-end pipeline
-│   └── chat.py         # chat command — interactive MCP tool-calling REPL
-├── core/
-│   └── analytics.py    # Fraktion counting and percentage calculation
-├── llm/
-│   └── groq_client.py  # Groq async client — summarisation and tool-calling
-├── mcp/
-│   ├── server.py       # FastMCP server with three registered tools
-│   └── tools.py        # Business logic functions called by MCP tools
-└── config.py           # Pydantic Settings — env var loading and validation
-```
-
----
-
 ## Architecture
 
 The system is organised into four independent layers:
@@ -284,14 +146,100 @@ User question
     → displayed to user
 ```
 
----
+### Project structure
 
-## Bonus: Interactive Chat
-
-The `chat` command implements a full MCP tool-calling loop in a terminal REPL. The LLM receives your natural language question alongside the three tool schemas, autonomously decides which tool to invoke and with what arguments, receives the live DIP API result, and composes a final answer — all without any hardcoded routing logic.
-
-```bash
-poetry run dip-mcp chat
+```
+src/dip_mcp/
+├── api/
+│   ├── client.py       # Async DIP API client with pagination and retries
+│   └── models.py       # Pydantic v2 data models
+├── cli/
+│   ├── app.py          # Typer root application and command registration
+│   ├── analyse.py      # analyse command — end-to-end pipeline
+│   └── chat.py         # chat command — interactive MCP tool-calling REPL
+├── core/
+│   └── analytics.py    # Fraktion counting and percentage calculation
+├── llm/
+│   └── groq_client.py  # Groq async client — summarisation and tool-calling
+├── mcp/
+│   ├── server.py       # FastMCP server with three registered tools
+│   └── tools.py        # Business logic functions called by MCP tools
+└── config.py           # Pydantic Settings — env var loading and validation
 ```
 
-The session maintains full conversation history, so follow-up questions work naturally. Type `exit` or press `Ctrl+C` to quit.
+---
+
+## Development
+
+### Quality gates
+
+Run all checks before committing:
+
+```bash
+# Static type checking (strict mode)
+poetry run mypy src/ --strict
+
+# Linting and formatting
+poetry run ruff check src/
+
+# Docstring style
+poetry run pydocstyle src/
+
+# Security scan
+poetry run bandit -r src/
+
+# Tests
+poetry run pytest tests/ -v
+```
+
+---
+
+## Extras
+
+The following were built beyond the task requirements.
+
+### BundesBot — Streamlit chat UI
+
+A conversational web interface for asking natural language questions about the Bundestag.
+
+```bash
+poetry run streamlit run frontend/app.py
+```
+
+Opens at **http://localhost:8501**. BundesBot selects the right MCP tool, fetches live data from the DIP API, and returns a formatted answer.
+
+Example questions:
+- *Fraktion split in WP 20?*
+- *Who is Friedrich Merz?*
+- *How many MdBs in WP 20?*
+
+### Docker
+
+A multi-stage Docker image is published to GHCR. No Python or Poetry installation needed.
+
+```bash
+# 1. Create your .env file
+cp .env.example .env   # then fill in DIP_API_KEY and GROQ_API_KEY
+
+# 2. Pull and run
+docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest
+
+# Run a specific Wahlperiode
+docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest analyse --wahlperiode 19
+
+# Interactive chat (requires a TTY)
+docker run --env-file .env -it ghcr.io/indrasena-reddy/dip-mcp:latest chat
+```
+
+#### Docker Compose
+
+```bash
+docker compose up
+```
+
+Builds the image locally and runs `analyse --wahlperiode 20` by default.
+
+```bash
+# Interactive chat via Compose
+docker compose run --rm -it dip-mcp chat
+```
