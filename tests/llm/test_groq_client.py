@@ -1,4 +1,4 @@
-"""Unit tests for the Groq LLM client wrapper (Task 10.7).
+"""Unit tests for the Groq LLM client wrapper.
 
 All Groq API calls are mocked via pytest-mock so no real API keys or network
 access are required.
