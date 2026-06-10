@@ -244,31 +244,6 @@ src/dip_mcp/
 
 ---
 
-## Development
-
-### Quality gates
-
-Run all checks before committing:
-
-```bash
-# Static type checking (strict mode)
-poetry run mypy src/ --strict
-
-# Linting and formatting
-poetry run ruff check src/
-
-# Docstring style
-poetry run pydocstyle src/
-
-# Security scan
-poetry run bandit -r src/
-
-# Tests
-poetry run pytest tests/ -v
-```
-
----
-
 ## Extras
 
 The following were built beyond the task requirements.
