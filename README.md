@@ -246,6 +246,47 @@ src/dip_mcp/
 
 ---
 
+## Testing
+
+The test suite covers the four core layers with no real API keys required — `conftest.py` injects placeholder credentials before any module is imported.
+
+| Test file | What it covers |
+|---|---|
+| `tests/api/test_client.py` | DIP API client, pagination, retries |
+| `tests/api/test_models.py` | Pydantic data model validation |
+| `tests/core/test_analytics.py` | Fraktion counting and distribution logic |
+| `tests/mcp/test_tools.py` | MCP tool business logic |
+| `tests/llm/test_groq_client.py` | Groq LLM client |
+
+```bash
+poetry run pytest tests/ -v
+```
+
+---
+
+## Development
+
+### Quality gates
+
+```bash
+# Static type checking (strict mode)
+poetry run mypy src/ --strict
+
+# Linting and formatting
+poetry run ruff check src/
+
+# Docstring style
+poetry run pydocstyle src/
+
+# Security scan
+poetry run bandit -r src/
+
+# Tests
+poetry run pytest tests/ -v
+```
+
+---
+
 ## Extras
 
 The following were built beyond the task requirements.
