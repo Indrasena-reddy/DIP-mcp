@@ -4,7 +4,7 @@
 
 DIP Parliamentary Analyser answers questions about German Bundestag composition using live open data and a conversational AI interface.
 
-A production-quality proof-of-concept that connects to the **German Bundestag DIP API**, analyses Fraktion (parliamentary group) membership distribution, and exposes the analysis through an **MCP (Model Context Protocol)** server with **Groq LLM** tool-calling.
+A production oriented proof-of-concept that connects to the **German Bundestag DIP API**, analyses Fraktion (parliamentary group) membership distribution, and exposes the analysis through an **MCP (Model Context Protocol)** server with **Groq LLM** tool-calling.
 
 ---
 
