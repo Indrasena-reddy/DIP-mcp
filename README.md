@@ -43,7 +43,8 @@ git clone https://github.com/Indrasena-reddy/DIP-mcp.git
 cd DIP-mcp
 
 # 2. Copy the environment file and fill in your API keys
-cp .env.example .env
+cp .env.example .env        # Linux/Mac
+copy .env.example .env      # Windows
 
 # 3. Install dependencies
 poetry install
@@ -162,7 +163,7 @@ src/dip_mcp/
 ├── llm/
 │   └── groq_client.py  # Groq async client — summarisation and tool-calling
 ├── mcp/
-│   ├── server.py       # FastMCP server with three registered tools
+│   ├── server.py       # FastMCP server with two registered tools
 │   └── tools.py        # Business logic functions called by MCP tools
 └── config.py           # Pydantic Settings — env var loading and validation
 ```
@@ -219,7 +220,9 @@ A multi-stage Docker image is published to GHCR. No Python or Poetry installatio
 
 ```bash
 # 1. Create your .env file
-cp .env.example .env   # then fill in DIP_API_KEY and GROQ_API_KEY
+cp .env.example .env        # Linux/Mac
+copy .env.example .env      # Windows
+# then fill in DIP_API_KEY and GROQ_API_KEY
 
 # 2. Pull and run
 docker run --env-file .env ghcr.io/indrasena-reddy/dip-mcp:latest
