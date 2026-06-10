@@ -43,38 +43,57 @@ HINT_CHIPS: list[str] = [
 ]
 
 INFO_TEXT: str = """
-**BundesBot** is an AI assistant for exploring German parliamentary (Bundestag) data.
+**BundesBot** reads live German parliamentary (Bundestag) open data and answers
+your questions in plain language.
 
-**What you can ask:**
-- Fraktion distributions across Wahlperioden
-- Profiles of Members of the Bundestag (MdBs)
-- Party representation and legislative activity
-- Debates, committees, and voting records
+**You can ask about:**
+- Fraktion (parliamentary group) distribution across election periods
+- Profiles of individual Members of the Bundestag (MdBs)
+- Party representation and group membership
 
-**How to use:**
-- Type your question and press **↑** or hit **Enter**
-- Use the pill selector to change the default Wahlperiode (election period 1–20)
-- Click the suggestion chips to try an example question
+**How to use it:**
+- Type a question and press **Enter** (or the **↑** button)
+- Tap a suggestion below to try an example
+- Ask in English or German — answers come back in the language you asked
 
-**Data source:** Bundestag Open Data API (DIP)
-**AI model:** Groq (LLaMA-based tool-calling)
-
+**Data:** Bundestag Open Data (DIP API)  ·  **Model:** Groq (Llama tool-calling)
 """
 
 # ── Custom CSS ────────────────────────────────────────────────────────────────
+# Direction: light "institutional paper" surface with the German federal
+# tricolour (Schwarz-Rot-Gold) as the signature device. Brass gold accent,
+# oxblood red used sparingly. Bricolage Grotesque display / Inter body /
+# Space Mono for data + eyebrow labels.
 CUSTOM_CSS: str = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+    --paper:      #F1EFE9;
+    --surface:    #FBFAF7;
+    --ink:        #1C1B19;
+    --ink-soft:   #5C5A54;
+    --ink-faint:  #908D84;
+    --gold:       #B8902B;
+    --gold-deep:  #9A7722;
+    --red:        #93312B;
+    --line:       #DDD9CF;
+    --line-soft:  #E7E3DA;
+}
+
 /* ── Base ─────────────────────────────────────────────────────────────────── */
 html, body, .stApp,
 [data-testid="stAppViewContainer"],
 [data-testid="stMain"] {
-    background-color: #0d1117 !important;
+    background-color: var(--paper) !important;
 }
+.stApp { font-family: 'Inter', system-ui, sans-serif !important; }
 .block-container,
 [data-testid="stMainBlockContainer"] {
-    max-width: 680px !important;
+    max-width: 700px !important;
     padding-left: 1.5rem !important;
     padding-right: 1.5rem !important;
+    padding-top: 2.2rem !important;
     padding-bottom: 6rem !important;
     margin: 0 auto !important;
 }
@@ -86,77 +105,115 @@ html, body, .stApp,
     display: none !important;
 }
 
-/* ── Header ──────────────────────────────────────────────────────────────── */
+/* ── Header / wordmark ───────────────────────────────────────────────────── */
 .bb-header {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: 0.5rem;
-    padding-bottom: 0.9rem;
+    padding-bottom: 0.4rem;
 }
-.bb-logo  { font-size: 2.3rem; line-height: 1; }
 .bb-title {
-    font-size: 2.2rem;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 2.5rem;
     font-weight: 800;
-    color: #ffffff;
-    letter-spacing: -0.5px;
+    color: var(--ink);
+    letter-spacing: -1.2px;
     line-height: 1;
+    margin: 0;
+}
+/* The signature: black-red-gold federal rule under the wordmark */
+.bb-tricolor {
+    display: flex;
+    width: 86px;
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+}
+.bb-tricolor span { flex: 1; }
+.bb-tricolor .b { background: #1C1B19; }
+.bb-tricolor .r { background: var(--red); }
+.bb-tricolor .g { background: var(--gold); }
+.bb-tagline {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.66rem;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
 }
 
-/* ── Hint chip buttons — horizontal row, small faded style ──────────────── */
+/* ── Suggestion chips — clear paper cards (not the old faded look) ───────── */
 [data-testid="stButton"] > button {
-    background: #161b22 !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    border-radius: 10px !important;
-    color: rgba(230,237,243,0.30) !important;
-    font-size: 0.65rem !important;
-    padding: 0.35rem 0.6rem !important;
-    text-align: center !important;
-    justify-content: center !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 12px !important;
+    color: var(--ink) !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    padding: 0.7rem 0.7rem !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
     width: 100% !important;
     white-space: normal !important;
     overflow: visible !important;
     word-break: break-word !important;
-    line-height: 1.35 !important;
-    transition: color 0.15s, border-color 0.15s !important;
+    line-height: 1.4 !important;
+    box-shadow: 0 1px 2px rgba(28,27,25,0.04) !important;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s !important;
 }
 [data-testid="stButton"] > button:hover {
-    background: rgba(255,255,255,0.04) !important;
-    border-color: rgba(255,255,255,0.2) !important;
-    color: rgba(230,237,243,0.58) !important;
+    border-color: var(--gold) !important;
+    box-shadow: 0 3px 12px rgba(184,144,43,0.16) !important;
+    transform: translateY(-1px) !important;
+    color: var(--ink) !important;
 }
+[data-testid="stButton"] > button:active { transform: translateY(0) !important; }
 
-/* Popover trigger (ℹ info button) — circular icon style */
+/* Popover trigger (ℹ info button) — circular */
+[data-testid="stPopover"] button,
 [data-testid="stPopover"] > button {
-    background: transparent !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    background: #1C1B19 !important;
+    border: 1.5px solid rgba(255,255,255,0.35) !important;
     border-radius: 50% !important;
-    color: rgba(230,237,243,0.45) !important;
-    font-size: 0.85rem !important;
-    width: 30px !important;
-    min-width: 30px !important;
-    height: 30px !important;
+    color: #ffffff !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 0.82rem !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
     padding: 0 !important;
     justify-content: center !important;
     align-items: center !important;
     white-space: nowrap !important;
     overflow: visible !important;
     text-overflow: unset !important;
-    margin-top: 0.55rem !important;
+    margin-top: 0.35rem !important;
+    box-shadow: none !important;
 }
+[data-testid="stPopover"] button p,
+[data-testid="stPopover"] button span {
+    color: #ffffff !important;
+}
+[data-testid="stPopover"] button:hover,
 [data-testid="stPopover"] > button:hover {
-    background: rgba(255,255,255,0.05) !important;
-    border-color: rgba(255,255,255,0.3) !important;
-    color: rgba(230,237,243,0.85) !important;
+    background: #2e2d2a !important;
+    border-color: var(--gold) !important;
+    color: var(--gold) !important;
+    transform: none !important;
 }
 
-/* Clear chat button (below the form) — text link style */
+/* Clear-chat button (below the form) — quiet text link */
 .element-container:has([data-testid="stForm"]) ~ div [data-testid="stButton"] > button,
 .element-container:has([data-testid="stForm"]) ~ [data-testid="stColumns"] [data-testid="stButton"] > button {
     background: transparent !important;
     border: none !important;
-    color: rgba(230,237,243,0.24) !important;
-    font-size: 0.75rem !important;
+    color: var(--ink-faint) !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.4px !important;
     padding: 0.2rem 0.5rem !important;
     border-radius: 4px !important;
     white-space: nowrap !important;
@@ -164,26 +221,34 @@ html, body, .stApp,
     text-overflow: unset !important;
     justify-content: center !important;
     text-align: center !important;
+    box-shadow: none !important;
 }
 .element-container:has([data-testid="stForm"]) ~ div [data-testid="stButton"] > button:hover,
 .element-container:has([data-testid="stForm"]) ~ [data-testid="stColumns"] [data-testid="stButton"] > button:hover {
-    color: rgba(230,237,243,0.5) !important;
-    background: rgba(255,255,255,0.04) !important;
+    color: var(--red) !important;
+    background: transparent !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
-/* ── Remove spacing between chip rows ────────────────────────────────────── */
+/* Remove spacing between chip rows */
 [data-testid="stVerticalBlock"] > div > [data-testid="stButton"] {
     margin-bottom: 0 !important;
 }
 
 /* ── Search bar (stForm) ─────────────────────────────────────────────────── */
 [data-testid="stForm"] {
-    background: #161b22 !important;
-    border: 1.5px solid rgba(255,255,255,0.12) !important;
-    border-radius: 14px !important;
-    padding: 0.3rem 0.55rem !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+    background: var(--surface) !important;
+    border: 1.5px solid var(--line) !important;
+    border-radius: 16px !important;
+    padding: 0.35rem 0.55rem !important;
+    box-shadow: 0 4px 18px rgba(28,27,25,0.07) !important;
     margin-top: 0.25rem !important;
+    transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+[data-testid="stForm"]:focus-within {
+    border-color: var(--gold) !important;
+    box-shadow: 0 4px 20px rgba(184,144,43,0.18) !important;
 }
 [data-testid="stForm"] > div,
 [data-testid="stForm"] [data-testid="stVerticalBlock"] { gap: 0 !important; }
@@ -203,12 +268,13 @@ html, body, .stApp,
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    color: #e6edf3 !important;
-    font-size: 0.95rem !important;
-    caret-color: #58a6ff;
+    color: var(--ink) !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.98rem !important;
+    caret-color: var(--gold-deep);
 }
 [data-testid="stForm"] input[type="text"]:focus { box-shadow: none !important; }
-[data-testid="stForm"] input::placeholder { color: rgba(230,237,243,0.28) !important; }
+[data-testid="stForm"] input::placeholder { color: var(--ink-faint) !important; }
 
 /* Hide "Press Enter to submit form" label */
 [data-testid="InputInstructions"],
@@ -219,61 +285,182 @@ html, body, .stApp,
     height: 0 !important;
 }
 
-
 /* Send button ↑ */
 [data-testid="stFormSubmitButton"] > button {
-    background: #1f6feb !important;
+    background: var(--gold) !important;
     border: none !important;
-    border-radius: 10px !important;
-    color: #ffffff !important;
+    border-radius: 11px !important;
+    color: #fff !important;
     font-size: 1.15rem !important;
     font-weight: 700 !important;
     padding: 0.28rem 0.85rem !important;
-    height: 34px !important;
+    height: 38px !important;
     white-space: nowrap !important;
     width: auto !important;
-    transition: background 0.15s !important;
+    box-shadow: 0 2px 6px rgba(184,144,43,0.3) !important;
+    transition: background 0.15s, transform 0.1s !important;
 }
-[data-testid="stFormSubmitButton"] > button:hover { background: #388bfd !important; }
+[data-testid="stFormSubmitButton"] > button:hover {
+    background: var(--gold-deep) !important;
+    transform: translateY(-1px) !important;
+}
+[data-testid="stFormSubmitButton"] > button:active { transform: translateY(0) !important; }
 
-/* ── Divider ─────────────────────────────────────────────────────────────── */
-hr { border-color: rgba(255,255,255,0.07) !important; margin: 0.8rem 0 !important; }
+/* ── Answer eyebrow (the per-message federal marker) ─────────────────────── */
+.bb-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1.4rem 0 0.3rem;
+}
+.bb-flag {
+    display: inline-flex;
+    width: 22px;
+    height: 11px;
+    border-radius: 2px;
+    overflow: hidden;
+    box-shadow: 0 1px 1.5px rgba(0,0,0,0.18);
+    flex-shrink: 0;
+}
+.bb-flag span { flex: 1; }
+.bb-flag .b { background: #1C1B19; }
+.bb-flag .r { background: var(--red); }
+.bb-flag .g { background: var(--gold); }
+.bb-eyebrow-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+}
 
 /* ── Chat message typography ─────────────────────────────────────────────── */
-p, li { color: #e6edf3 !important; font-size: 0.95rem !important; line-height: 1.68 !important; }
-h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
-strong { color: #ffffff !important; }
+p, li {
+    color: var(--ink) !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.97rem !important;
+    line-height: 1.7 !important;
+}
+h1, h2, h3, h4, h5, h6 {
+    color: var(--ink) !important;
+    font-family: 'Bricolage Grotesque', sans-serif !important;
+    letter-spacing: -0.3px !important;
+}
+strong { color: var(--ink) !important; font-weight: 600 !important; }
+a { color: var(--gold-deep) !important; }
 code:not(pre > code) {
-    background: rgba(110,118,129,0.35) !important;
+    background: rgba(184,144,43,0.14) !important;
     border-radius: 4px !important;
-    padding: 0.12rem 0.38rem !important;
-    font-size: 0.87em !important;
-    color: #e6edf3 !important;
+    padding: 0.1rem 0.38rem !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 0.84em !important;
+    color: var(--gold-deep) !important;
 }
 pre {
-    background: #161b22 !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    border-radius: 8px !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 10px !important;
     padding: 1rem !important;
     overflow-x: auto !important;
 }
-pre > code { background: transparent !important; color: #e6edf3 !important; font-size: 0.86rem !important; padding: 0 !important; }
-blockquote { border-left: 3px solid rgba(88,166,255,0.45) !important; padding-left: 0.75rem !important; margin-left: 0 !important; }
-table { border-collapse: collapse !important; width: 100% !important; }
-th, td { border: 1px solid rgba(255,255,255,0.1) !important; padding: 0.45rem 0.75rem !important; }
-th { background: rgba(255,255,255,0.05) !important; }
-[data-testid="stSpinner"] p { color: #58a6ff !important; font-size: 0.88rem !important; }
+pre > code {
+    background: transparent !important;
+    color: var(--ink) !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 0.84rem !important;
+    padding: 0 !important;
+}
+blockquote {
+    border-left: 3px solid var(--gold) !important;
+    padding-left: 0.85rem !important;
+    margin-left: 0 !important;
+    color: var(--ink-soft) !important;
+}
+
+/* Data tables — clean ledger look on white */
+table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    background: var(--surface) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    box-shadow: 0 1px 3px rgba(28,27,25,0.06) !important;
+    font-family: 'Inter', sans-serif !important;
+}
+th, td {
+    border-bottom: 1px solid var(--line-soft) !important;
+    border-left: none !important;
+    border-right: none !important;
+    padding: 0.5rem 0.85rem !important;
+    text-align: left !important;
+}
+th {
+    background: rgba(28,27,25,0.04) !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.6px !important;
+    text-transform: uppercase !important;
+    color: var(--ink-soft) !important;
+}
+td:not(:first-child) { font-variant-numeric: tabular-nums !important; }
+
+/* Spinner */
+[data-testid="stSpinner"] p {
+    color: var(--gold-deep) !important;
+    font-family: 'Space Mono', monospace !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.4px !important;
+}
+[data-testid="stSpinner"] svg { stroke: var(--gold) !important; }
+
+/* Info popover panel — force light surface on the panel AND every inner
+   container (Streamlit nests the content in wrappers that otherwise keep a
+   dark fill), and dark ink on all text. NOTE: target only the popover BODY,
+   never [data-testid="stPopover"] (that's the trigger button). */
+[data-testid="stPopoverBody"],
+[data-testid="stPopoverBody"] > div,
+[data-testid="stPopoverBody"] [data-testid="stVerticalBlock"],
+[data-testid="stPopoverBody"] [data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stPopoverBody"] [data-testid="stMarkdownContainer"] {
+    background: var(--surface) !important;
+    background-color: var(--surface) !important;
+}
+[data-testid="stPopoverBody"] {
+    border: 1px solid var(--line) !important;
+    border-radius: 12px !important;
+}
+[data-testid="stPopoverBody"] p,
+[data-testid="stPopoverBody"] li,
+[data-testid="stPopoverBody"] strong,
+[data-testid="stPopoverBody"] h1,
+[data-testid="stPopoverBody"] h2,
+[data-testid="stPopoverBody"] h3 {
+    color: var(--ink) !important;
+}
+[data-testid="stPopoverBody"] strong { font-weight: 600 !important; }
 </style>
 """
 
 # ── Message HTML ──────────────────────────────────────────────────────────────
+# User question: solid ink bubble, right-aligned.
 _USER_BUBBLE: str = (
-    '<div style="display:flex;justify-content:flex-end;margin:0.9rem 0 0.4rem;">'
-    '<div style="background:#1e2433;border:1px solid rgba(255,255,255,0.09);'
-    "border-radius:18px 18px 4px 18px;padding:0.65rem 1.05rem;"
-    'max-width:82%;color:#e6edf3;font-size:0.95rem;line-height:1.65;word-wrap:break-word;">'
+    '<div style="display:flex;justify-content:flex-end;margin:1.4rem 0 0.2rem;">'
+    '<div style="background:#1C1B19;border-radius:16px 16px 4px 16px;'
+    "padding:0.6rem 1.05rem;max-width:80%;color:#F1EFE9;"
+    "font-family:\'Inter\',sans-serif;font-size:0.95rem;line-height:1.55;"
+    'word-wrap:break-word;box-shadow:0 2px 8px rgba(28,27,25,0.16);">'
     "{content}"
     "</div></div>"
+)
+
+# Assistant answer: federal tricolour eyebrow above typeset markdown.
+_ASSISTANT_EYEBROW: str = (
+    '<div class="bb-eyebrow">'
+    '<span class="bb-flag"><span class="b"></span><span class="r"></span>'
+    '<span class="g"></span></span>'
+    '<span class="bb-eyebrow-label">Parlamentsdaten</span>'
+    "</div>"
 )
 
 
@@ -283,6 +470,7 @@ def _render_user_msg(content: str) -> None:
 
 
 def _render_assistant_msg(content: str) -> None:
+    st.markdown(_ASSISTANT_EYEBROW, unsafe_allow_html=True)
     st.markdown(content)
     st.markdown('<div style="height:0.4rem;"></div>', unsafe_allow_html=True)
 
@@ -419,8 +607,10 @@ def main() -> None:
     with title_col:
         st.markdown(
             '<div class="bb-header">'
-            '<span class="bb-logo">🏛️</span>'
             '<span class="bb-title">BundesBot</span>'
+            '<span class="bb-tricolor"><span class="b"></span>'
+            '<span class="r"></span><span class="g"></span></span>'
+            '<span class="bb-tagline">Deutscher Bundestag · Open Data</span>'
             "</div>",
             unsafe_allow_html=True,
         )
@@ -447,7 +637,7 @@ def main() -> None:
     if prompt_to_process:
         _render_user_msg(prompt_to_process)
 
-        with st.spinner("Thinking…"):
+        with st.spinner("Reading parliamentary data…"):
             try:
                 msgs_for_api = copy.deepcopy(st.session_state.llm_messages)
                 msgs_for_api.append({"role": "user", "content": prompt_to_process})
@@ -494,7 +684,7 @@ def main() -> None:
         with col_input:
             user_input: str = st.text_input(
                 "query",
-                placeholder="Ask anything",
+                placeholder="Ask about the Bundestag…",
                 label_visibility="collapsed",
             )
 
